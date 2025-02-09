@@ -23,7 +23,7 @@ app.use(express.urlencoded({
 app.use(express.static("public")) // public assest exes by ever one
 
 // Handle user cookies and perform CURD ope ration
-app.use(cookieParser())
+app.use(cookieParser()) // pass cookie in req, res field
 
 
 //routes
