@@ -357,6 +357,86 @@ const updateUserCoverImage = asyncHandler ( async (req,res) => {
     
 })
 
+// subscripition join with user model (left join) use aggregation pipeline
+const getUserChannelProfile = asyncHandler ( async (req,res) => {
+    const {username} = req.params
+
+    if(!username?.trim()){ // hai to optionally trim
+        throw new ApiError(400, "Username is missing")
+    }
+
+    const channel = await User.aggregate([ // aggregate is method is accept array and further object where object is pipeline
+        {
+            $match: {
+                username: username?.toLowerCase() // kise match karu, give only one user
+            }
+        },
+        {
+            $lookup: { 
+                from: "subscriptions", // kaha se dekhu (model name) pural value pass
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers" // count subscriber through channel
+            }
+        },
+        {
+            $lookup: { 
+                from: "subscriptions", // kaha se dekhu (model name) pural value pass
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribeTo" // apne kis kis ko subscribed kiya hai subscriber ke through 
+            }
+        },
+        // add to new info in user model
+        {
+            $addFields: {
+                subscriberCount: {
+                    $size: "$subscriber" // $ sathe fields name aave
+                },
+                channelsSubscribedToCount: {
+                    $size: "$subscribeTO"
+                },
+                issubscribed: {
+                    $cond: { // apply condition if, then(true) and else(false)
+                        if: { 
+                            $in: [req.user?._id, "$subscribers.subscriber"]//kis object mese dekh na hai. pass model and element // $in: calculate array or object , accept array
+                            
+                        },
+                        then: true,
+                            
+                        else: false
+                    }
+                }
+            }
+        },
+        { // give projection, send select items
+            $project: {
+                fullName: 1,
+                username: 1,
+                subscriberCount: 1,
+                channelsSubscribedToCount: 1,
+                issubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            }
+        }
+    ])
+    console.log(channel);
+    if(!channel?.length){
+        throw new ApiError(404, "Channel does not exists")
+    }
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            channel,
+            "User channel fetched successfully"
+        )
+    )    
+})
+
 export {
     registerUser,
     loginUser,
@@ -366,5 +446,6 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile
 }
