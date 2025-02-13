@@ -469,7 +469,7 @@ const getWatchHistory = asyncHandler ( async (req,res) => {
                             ]
                         }
                     },
-                    { // change data strucure array to object
+                    { // change data structure array to object
                         $addFields: {
                             owner: {
                                 $first: "$owner"
