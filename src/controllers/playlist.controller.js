@@ -352,12 +352,69 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 const deletePlaylist = asyncHandler(async (req, res) => {
     const { playlistId } = req.params
     // TODO: delete playlist
+    if (!playlistId || !isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Missing or Invalid playlist ID");
+      }
+    
+      const playlist = await Playlist.findById(playlistId);
+    
+      if (!playlist) {
+        throw new ApiError(400, "No playlist found with this ID");
+      }
+    
+      if (!playlist.owner.equals(req.user._id)) {
+        throw new ApiError(403, "You are not allowed to delete this playlist");
+      }
+    
+      const deletePlaylist = await Playlist.findByIdAndDelete(playlist._id);
+    
+      if (!deletePlaylist) {
+        throw new ApiError(400, "Error while deleting this playlist");
+      }
+    
+      return res.status(200).json(new ApiResponse(200, {}, "Playlist Deleted"));
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
     const { playlistId } = req.params
     const { name, description } = req.body
     //TODO: update playlist
+    if (!playlistId || !isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Missing or Invalid playlist ID");
+    }
+    
+    if (!(name || description)) {
+        throw new ApiError(400, "All the fields are required");
+    }
+
+    const playlist = await Playlist.findById(playlistId);
+
+    if (!playlist) {
+        throw new ApiError(400, "No playlist found with this ID");
+    }
+
+    if (!playlist.owner.equals(req.user._id)) {
+        throw new ApiError(403, "You are not allowed to update this playlist");
+    }
+
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+        playlistId,
+        {
+            $set: {
+                name,
+                description,
+            },
+        },
+        { new: true }
+    );
+    
+    if (!updatedPlaylist) {
+        throw new ApiError(400, "Error while updating this playlist");
+    }
+    
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updatedPlaylist, "Playlist updated"));
 })
 
 export {
